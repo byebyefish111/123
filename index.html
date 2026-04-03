@@ -111,10 +111,15 @@
 </div>
 
 <script>
-    // ==================== SUPABASE 初始化 ====================
-    const SUPABASE_URL = "https://gjkthssvuzeycaxncumy.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdqa3Roc3N2dXpleWNheG5jdW15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNzM0NjYsImV4cCI6MjA5MDc0OTQ2Nn0.TxjzjydvQFQG5BDpY6SCrBrNKIm70B9HW_LTqMmUr20";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+   // ==================== SUPABASE 初始化 ====================
+const SUPABASE_URL = "https://gjkthssvuzeycaxncumy.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdqa3Roc3N2dXpleWNheG5jdW15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNzM0NjYsImV4cCI6MjA5MDc0OTQ2Nn0.TxjzjydvQFQG5BDpY6SCrBrNKIm70B9HW_LTqMmUr20";
+
+// 确保只创建一次客户端
+if (!window._supabaseClient) {
+    window._supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+const supabase = window._supabaseClient;
     
     // 全局状态
     let currentUser = null;
