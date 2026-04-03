@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>英语带背教师端 - 完整版</title>
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 基础样式 & 薄荷绿主题 */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif; }
+        body { background: #f0f7f2; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .main-content { flex: 1; overflow-y: auto; padding: 20px 16px 10px; }
+        .bottom-nav { background: white; border-top: 1px solid #d0e6d8; display: flex; justify-content: space-around; align-items: center; padding: 8px 16px 12px; flex-shrink: 0; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; font-size: 0.75rem; color: #6c8f7a; cursor: pointer; padding: 6px 12px; border-radius: 30px; }
+        .nav-item.active { color: #2e6b47; font-weight: 600; background: #e0f0e8; }
+        .nav-icon { font-size: 1.5rem; }
+        .view { display: none; }
+        .view.active-view { display: block; }
+        .home-header, .student-header { background: linear-gradient(135deg, #5cb85c, #2e8b57); border-radius: 28px; padding: 20px; color: white; margin-bottom: 24px; }
+        .student-card-home, .student-card-af, .word-item, .word-card-learn, .group-word-card, .schedule-container, .anti-forget-container, .learning-container, .page1-container, .group-words-container {
+            background: white; border-radius: 28px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 18px; margin-bottom: 20px;
+        }
+        .student-card-home { display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
+        .student-card-home.selected { background: #e0f5e8; border: 2px solid #3cb371; }
+        .student-info h3 { font-size: 1.2rem; color: #2e6b47; }
+        .student-info p { font-size: 0.8rem; color: #6c8f7a; margin-top: 4px; }
+        .btn-primary, .start-learn-btn, .add-course-btn, .btn-save, .next-group-btn, .check-btn { background: #3cb371; color: white; border: none; padding: 12px 20px; border-radius: 60px; font-weight: 600; font-size: 1rem; cursor: pointer; text-align: center; transition: 0.2s; }
+        .small-btn, .course-btn, .weekday-btn, .lib-btn, .tab-btn, .speed-btn, .rating-btn, .btn-cancel { background: #eef5f0; border: none; padding: 6px 14px; border-radius: 60px; font-size: 0.75rem; cursor: pointer; color: #2e6b47; }
+        .btn-cancel { background: #eef5f0; }
+        .action-btn.correct { color: #2c7a4d; background: none; font-size: 1.5rem; border: none; cursor: pointer; }
+        .action-btn.wrong { color: #e67e22; background: none; font-size: 1.5rem; border: none; cursor: pointer; }
+        .flip-card { background: transparent; width: 100%; height: 260px; perspective: 1000px; margin-bottom: 20px; }
+        .flip-card-inner { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer; }
+        .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+        .flip-front, .flip-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 28px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; background: white; box-shadow: 0 8px 20px rgba(0,0,0,0.1); padding: 20px; flex-direction: column; gap: 16px; }
+        .flip-back { background: linear-gradient(145deg, #e8f5e9, #c8e6d9); transform: rotateY(180deg); }
+        .rating-buttons { display: flex; gap: 12px; width: 100%; justify-content: center; margin-top: 20px; }
+        .rating-btn { font-size: 1rem; padding: 10px 20px; }
+        .rating-btn.remember { background: #3cb371; color: white; }
+        .rating-btn.vague { background: #f5b7a8; color: #5a2a1a; }
+        .rating-btn.forget { background: #f5a8a8; color: #5a1a1a; }
+        .course-form { background: #f8fafc; border-radius: 28px; padding: 16px; margin-bottom: 20px; display: none; }
+        .course-form.show { display: block; }
+        .form-group { margin-bottom: 16px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 14px; border-radius: 40px; border: 1px solid #cbdde9; background: white; }
+        .info-card { background: #eef5f0; border-radius: 24px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .info-card .count { font-size: 1.5rem; font-weight: 800; color: #3cb371; }
+        .review-progress { background: #eef5f0; border-radius: 40px; padding: 8px 16px; text-align: center; margin-bottom: 20px; font-weight: 600; }
+        .modal-card { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; border-radius: 32px; max-width: 90%; width: 320px; padding: 20px; text-align: center; }
+        .flex-buttons { display: flex; gap: 12px; margin-top: 12px; }
+        .word-item { padding: 12px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .badge { background: #eef5f0; border-radius: 40px; padding: 4px 12px; font-size: 0.75rem; }
+        .expiry-warning { background: #fff3e0; padding: 12px; border-radius: 28px; margin-bottom: 16px; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+<div class="main-content" id="mainContent">
+    <!-- 登录视图 -->
+    <div id="authView" class="view">
+        <div class="home-header" style="text-align:center;">
+            <h2>英语带背教师端</h2>
+            <p>登录 / 注册</p>
+        </div>
+        <div style="background:white; border-radius:28px; padding:20px;">
+            <div id="loginForm">
+                <div class="form-group"><label>邮箱</label><input type="email" id="loginEmail" placeholder="teacher@example.com"></div>
+                <div class="form-group"><label>密码</label><input type="password" id="loginPassword" placeholder="密码"></div>
+                <button id="loginBtn" class="btn-primary" style="width:100%;">登录</button>
+                <p style="margin-top:16px; text-align:center;">没有账号？ <a href="#" id="showRegisterBtn">注册</a></p>
+            </div>
+            <div id="registerForm" style="display:none;">
+                <div class="form-group"><label>用户名</label><input type="text" id="regUsername" placeholder="用户名"></div>
+                <div class="form-group"><label>邮箱</label><input type="email" id="regEmail" placeholder="teacher@example.com"></div>
+                <div class="form-group"><label>密码</label><input type="password" id="regPassword" placeholder="密码"></div>
+                <button id="registerBtn" class="btn-primary" style="width:100%;">注册</button>
+                <p style="margin-top:16px; text-align:center;"><a href="#" id="showLoginBtn">返回登录</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 教师视图 -->
+    <div id="teacherView" class="view">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <span>欢迎，<span id="teacherName"></span> <span style="font-size:0.8rem;">(教师端)</span></span>
+            <button id="logoutBtn" class="small-btn">退出</button>
+        </div>
+        <div id="expiryWarning" class="expiry-warning"></div>
+        <div class="bottom-nav" style="position:relative; background:transparent; box-shadow:none; margin-bottom:16px;">
+            <button class="nav-item active" data-teacher-tab="home"><div class="nav-icon">🏠</div><div class="nav-label">首页</div></button>
+            <button class="nav-item" data-teacher-tab="schedule"><div class="nav-icon">📅</div><div class="nav-label">排课</div></button>
+            <button class="nav-item" data-teacher-tab="antiForget"><div class="nav-icon">🧠</div><div class="nav-label">抗遗忘</div></button>
+            <button class="nav-item" data-teacher-tab="library"><div class="nav-icon">📚</div><div class="nav-label">词库</div></button>
+        </div>
+        <div id="teacherHomeView" class="teacher-tab-view"></div>
+        <div id="teacherScheduleView" class="teacher-tab-view" style="display:none;"></div>
+        <div id="teacherAntiForgetView" class="teacher-tab-view" style="display:none;"></div>
+        <div id="teacherLibraryView" class="teacher-tab-view" style="display:none;"></div>
+    </div>
+
+    <!-- 管理员视图 -->
+    <div id="adminView" class="view">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3>管理员后台</h3>
+            <button id="adminLogoutBtn" class="small-btn">退出</button>
+        </div>
+        <div id="teacherListContainer"></div>
+    </div>
+</div>
+
+<script>
+    // ==================== SUPABASE 初始化 ====================
+    const SUPABASE_URL = "https://gjkthssvuzeycaxncumy.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdqa3Roc3N2dXpleWNheG5jdW15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNzM0NjYsImV4cCI6MjA5MDc0OTQ2Nn0.TxjzjydvQFQG5BDpY6SCrBrNKIm70B9HW_LTqMmUr20";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // 全局状态
+    let currentUser = null;
+    let currentTeacherTab = 'home';
+    let currentStudentId = null;       // 教师当前选中的学生
+    let currentLearningWords = [];     // 当前学习的单词列表
+    let currentLearnIndex = 0;
+    let currentReviewQueue = [];        // 待复习单词列表
+    
+    // DOM 元素
+    const authView = document.getElementById('authView');
+    const teacherView = document.getElementById('teacherView');
+    const adminView = document.getElementById('adminView');
+    
+    // 辅助函数
+    function showModal(msg, onClose) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-card';
+        modal.innerHTML = `<div class="modal-content"><p>${msg}</p><button class="small-btn" id="modalClose">确定</button></div>`;
+        document.body.appendChild(modal);
+        document.getElementById('modalClose').onclick = () => { modal.remove(); if(onClose) onClose(); };
+    }
+    
+    // 检查教师账号过期
+    async function checkExpiryAndRender() {
+        if (!currentUser) return;
+        const { data, error } = await supabase.from('teachers').select('expiry_date, username').eq('id', currentUser.id).single();
+        if (error) { console.error(error); return; }
+        const expiryDate = new Date(data.expiry_date);
+        const now = new Date();
+        const warningDiv = document.getElementById('expiryWarning');
+        if (expiryDate < now) {
+            warningDiv.innerHTML = '⚠️ 您的账号已过期，请联系管理员续费。功能将受限(仅查看)。';
+            warningDiv.style.background = '#ffe0e0';
+        } else {
+            const daysLeft = Math.ceil((expiryDate - now) / (1000 * 3600 * 24));
+            warningDiv.innerHTML = `✅ 账号有效期至 ${data.expiry_date}，剩余 ${daysLeft} 天。`;
+            warningDiv.style.background = '#e0f5e0';
+        }
+        document.getElementById('teacherName').innerText = data.username;
+    }
+    
+    // ==================== 核心业务：学生管理、单词学习、SM2复习 ====================
+    // SM2 参数更新
+    function updateSM2(wordProgress, quality) { // quality: 0-5 (0忘记,3模糊,5记住)
+        let { ease_factor, interval, repetitions } = wordProgress;
+        if (quality >= 3) {
+            if (repetitions === 0) interval = 1;
+            else if (repetitions === 1) interval = 6;
+            else interval = Math.round(interval * ease_factor);
+            repetitions++;
+        } else {
+            repetitions = 0;
+            interval = 1;
+        }
+        ease_factor = ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+        if (ease_factor < 1.3) ease_factor = 1.3;
+        const next_review = new Date();
+        next_review.setDate(next_review.getDate() + interval);
+        return { ease_factor, interval, repetitions, next_review_date: next_review.toISOString().split('T')[0], status: repetitions>=2 ? 'mastered' : 'learning' };
+    }
+    
+    // 获取当前学生待复习单词
+    async function fetchReviewWords(studentId) {
+        const { data: progresses, error } = await supabase.from('student_words')
+            .select('*, words(word, translation)')
+            .eq('student_id', studentId)
+            .lte('next_review_date', new Date().toISOString().split('T')[0]);
+        if (error) return [];
+        return progresses.filter(p => p.status !== 'mastered');
+    }
+    
+    // 获取新词学习列表（基于学生激活课程，每日最多新词量）
+    async function fetchNewWordsToLearn(studentId, limit = 5) {
+        // 获取学生激活课程
+        const { data: course } = await supabase.from('courses').select('library_id, daily_new_words').eq('student_id', studentId).eq('is_active', true).single();
+        if (!course) return [];
+        const { data: learned } = await supabase.from('student_words').select('word_id').eq('student_id', studentId);
+        const learnedIds = learned.map(l => l.word_id);
+        let query = supabase.from('words').select('*').eq('library_id', course.library_id);
+        if (learnedIds.length) query = query.not('id', 'in', `(${learnedIds.join(',')})`);
+        const { data: newWords } = await query.limit(limit);
+        return newWords || [];
+    }
+    
+    // 记录学习结果
+    async function recordWordLearning(studentId, wordId, quality) {
+        let { data: exist } = await supabase.from('student_words').select('*').eq('student_id', studentId).eq('word_id', wordId).single();
+        if (!exist) {
+            const newRecord = { student_id: studentId, word_id: wordId, status: 'learning', ease_factor: 2.5, interval: 0, repetitions: 0, next_review_date: new Date().toISOString().split('T')[0] };
+            const { data: inserted } = await supabase.from('student_words').insert(newRecord).select().single();
+            exist = inserted;
+        }
+        const updated = updateSM2(exist, quality === 2 ? 5 : (quality === 1 ? 3 : 0));
+        await supabase.from('student_words').update(updated).eq('id', exist.id);
+    }
+    
+    // 渲染教师首页：学生列表 + 统计数据 + 学习入口
+    async function renderTeacherHome() {
+        const container = document.getElementById('teacherHomeView');
+        if (!container) return;
+        // 获取教师的所有学生
+        const { data: students, error } = await supabase.from('students').select('*').eq('teacher_id', currentUser.id);
+        if (error) { container.innerHTML = `<div>加载失败</div>`; return; }
+        let statsHtml = `<div class="student-header"><h2>我的学生</h2><button id="addStudentBtn" class="small-btn" style="background:white;color:#2e6b47;">+ 添加学生</button></div>`;
+        if (students.length === 0) statsHtml += `<div class="info-card">暂无学生，请点击上方按钮添加。</div>`;
+        for (let s of students) {
+            const { count: learned } = await supabase.from('student_words').select('*', { count: 'exact', head: true }).eq('student_id', s.id).eq('status', 'mastered');
+            const { count: reviewCount } = await supabase.from('student_words').select('*', { count: 'exact', head: true }).eq('student_id', s.id).lte('next_review_date', new Date().toISOString().split('T')[0]);
+            statsHtml += `
+                <div class="student-card-home ${currentStudentId === s.id ? 'selected' : ''}" data-student-id="${s.id}">
+                    <div class="student-info"><h3>${s.name}</h3><p>已掌握: ${learned || 0} 词 | 待复习: ${reviewCount || 0}</p></div>
+                    <div class="student-badge-home">${currentStudentId === s.id ? '当前' : '选择'}</div>
+                </div>
+            `;
+        }
+        statsHtml += `<div class="info-card"><div><strong>当前选中学生</strong></div><div id="selectedStudentName">${currentStudentId ? (students.find(s=>s.id===currentStudentId)?.name || '未选择') : '未选择'}</div></div>`;
+        statsHtml += `<div class="flex-buttons"><button id="startLearnBtn" class="btn-primary" style="flex:1">📖 开始学习新词</button><button id="startReviewBtn" class="btn-primary" style="background:#e67e22;">🔄 抗遗忘复习</button></div>`;
+        container.innerHTML = statsHtml;
+        
+        document.querySelectorAll('.student-card-home').forEach(card => {
+            card.addEventListener('click', () => {
+                currentStudentId = parseInt(card.dataset.studentId);
+                renderTeacherHome();
+                renderTeacherAntiForget(); // 刷新复习视图
+            });
+        });
+        document.getElementById('addStudentBtn')?.addEventListener('click', async () => {
+            const name = prompt('输入学生姓名');
+            if(name) await supabase.from('students').insert({ teacher_id: currentUser.id, name });
+            renderTeacherHome();
+        });
+        document.getElementById('startLearnBtn')?.addEventListener('click', () => startLearningFlow());
+        document.getElementById('startReviewBtn')?.addEventListener('click', () => startReviewFlow());
+    }
+    
+    // 学习流程
+    async function startLearningFlow() {
+        if (!currentStudentId) { showModal('请先选择一个学生'); return; }
+        const words = await fetchNewWordsToLearn(currentStudentId, 8);
+        if (!words.length) { showModal('当前没有新词可学，请先排课或添加单词'); return; }
+        currentLearningWords = words;
+        currentLearnIndex = 0;
+        renderLearningCard();
+    }
+    
+    function renderLearningCard() {
+        if (currentLearnIndex >= currentLearningWords.length) {
+            showModal('恭喜！本轮新词学习完成！', () => { renderTeacherHome(); });
+            return;
+        }
+        const word = currentLearningWords[currentLearnIndex];
+        const container = document.getElementById('teacherHomeView');
+        container.innerHTML = `<div class="learning-container"><div class="flip-card" id="learnFlipCard"><div class="flip-card-inner"><div class="flip-front"><div class="word-eng-large">${word.word}</div><div class="step-badge">点击卡片显示释义</div></div><div class="flip-back"><div>${word.translation}</div><div class="step-badge">${currentLearnIndex+1}/${currentLearningWords.length}</div></div></div></div><div class="rating-buttons"><button class="rating-btn forget" data-quality="0">😰 忘记</button><button class="rating-btn vague" data-quality="1">🤔 模糊</button><button class="rating-btn remember" data-quality="2">😊 记住</button></div></div>`;
+        const flipCard = document.getElementById('learnFlipCard');
+        flipCard.addEventListener('click', () => flipCard.classList.toggle('flipped'));
+        document.querySelectorAll('.rating-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const quality = parseInt(btn.dataset.quality);
+                await recordWordLearning(currentStudentId, word.id, quality);
+                currentLearnIndex++;
+                renderLearningCard();
+            });
+        });
+    }
+    
+    // 抗遗忘复习流程
+    async function startReviewFlow() {
+        if (!currentStudentId) { showModal('请先选择学生'); return; }
+        const reviews = await fetchReviewWords(currentStudentId);
+        if (reviews.length === 0) { showModal('暂无需要复习的单词'); return; }
+        currentReviewQueue = reviews;
+        renderReviewCard(0);
+    }
+    
+    function renderReviewCard(idx) {
+        if (idx >= currentReviewQueue.length) {
+            showModal('复习完成！继续保持～', () => renderTeacherAntiForget());
+            return;
+        }
+        const rev = currentReviewQueue[idx];
+        const wordObj = rev.words;
+        const container = document.getElementById('teacherHomeView');
+        container.innerHTML = `<div class="anti-forget-container"><div class="review-progress">复习进度: ${idx+1} / ${currentReviewQueue.length}</div><div class="flip-card" id="reviewFlipCard"><div class="flip-card-inner"><div class="flip-front"><div class="word-eng-large">${wordObj.word}</div><div class="step-badge">点击显示释义</div></div><div class="flip-back"><div>${wordObj.translation}</div></div></div></div><div class="rating-buttons"><button class="rating-btn forget" data-quality="0">忘记</button><button class="rating-btn vague" data-quality="1">模糊</button><button class="rating-btn remember" data-quality="2">记住</button></div></div>`;
+        const flipCard = document.getElementById('reviewFlipCard');
+        flipCard.addEventListener('click', () => flipCard.classList.toggle('flipped'));
+        document.querySelectorAll('.rating-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const quality = parseInt(btn.dataset.quality);
+                await recordWordLearning(currentStudentId, wordObj.id, quality);
+                renderReviewCard(idx+1);
+            });
+        });
+    }
+    
+    // 排课视图：显示学生课程，新建课程关联词库
+    async function renderTeacherSchedule() {
+        const container = document.getElementById('teacherScheduleView');
+        if (!currentStudentId) { container.innerHTML = `<div class="schedule-container">请先在首页选择一个学生，再为其排课。</div>`; return; }
+        const { data: courses } = await supabase.from('courses').select('*, word_libraries(name)').eq('student_id', currentStudentId);
+        const { data: libraries } = await supabase.from('word_libraries').select('*').eq('teacher_id', currentUser.id);
+        let html = `<div class="schedule-container"><h3>${currentStudentId ? '当前学生排课' : ''}</h3><button id="showCourseFormBtn" class="small-btn">+ 新建课程</button><div id="courseForm" class="course-form"><div class="form-group"><label>选择词库</label><select id="courseLib">${libraries.map(l=>`<option value="${l.id}">${l.name}</option>`).join('')}</select></div><div class="form-group"><label>每日新词数</label><input type="number" id="dailyNew" value="5"></div><button id="saveCourseBtn" class="btn-primary">保存课程并激活</button></div>`;
+        for(let c of courses) {
+            html += `<div class="course-item"><div><strong>${c.word_libraries?.name || '词库'}</strong><br/>每日新词: ${c.daily_new_words}  ${c.is_active ? '✅ 激活' : '❌ 未激活'}</div><button class="small-btn activate-course" data-id="${c.id}" data-active="${!c.is_active}">${c.is_active ? '停用' : '激活'}</button></div>`;
+        }
+        container.innerHTML = html;
+        document.getElementById('showCourseFormBtn')?.addEventListener('click', () => document.getElementById('courseForm')?.classList.toggle('show'));
+        document.getElementById('saveCourseBtn')?.addEventListener('click', async () => {
+            const libId = document.getElementById('courseLib').value;
+            const daily = parseInt(document.getElementById('dailyNew').value);
+            if(!libId) return;
+            // 先停用其他课程
+            await supabase.from('courses').update({ is_active: false }).eq('student_id', currentStudentId);
+            await supabase.from('courses').insert({ student_id: currentStudentId, library_id: libId, daily_new_words: daily, is_active: true, start_date: new Date().toISOString().split('T')[0] });
+            renderTeacherSchedule();
+        });
+        document.querySelectorAll('.activate-course').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const cid = btn.dataset.id;
+                const toActive = btn.dataset.active === 'true';
+                if(toActive) await supabase.from('courses').update({ is_active: false }).eq('student_id', currentStudentId);
+                await supabase.from('courses').update({ is_active: toActive }).eq('id', cid);
+                renderTeacherSchedule();
+            });
+        });
+    }
+    
+    // 抗遗忘视图：显示当前学生待复习数量 + 快捷复习
+    async function renderTeacherAntiForget() {
+        const container = document.getElementById('teacherAntiForgetView');
+        if (!currentStudentId) { container.innerHTML = `<div class="anti-forget-container">请先在首页选择学生</div>`; return; }
+        const reviews = await fetchReviewWords(currentStudentId);
+        container.innerHTML = `<div class="anti-forget-container"><div class="info-card"><span>📅 待复习单词数</span><span class="count">${reviews.length}</span></div><button id="quickReviewBtn" class="btn-primary">开始复习</button></div>`;
+        document.getElementById('quickReviewBtn')?.addEventListener('click', startReviewFlow);
+    }
+    
+    // 词库管理：教师自定义词库和单词
+    async function renderTeacherLibrary() {
+        const container = document.getElementById('teacherLibraryView');
+        const { data: libraries } = await supabase.from('word_libraries').select('*').eq('teacher_id', currentUser.id);
+        let html = `<div class="page1-container"><button id="newLibBtn" class="small-btn">+ 新建词库</button><div id="libList">`;
+        for(let lib of libraries) {
+            const { count } = await supabase.from('words').select('*', { count: 'exact', head: true }).eq('library_id', lib.id);
+            html += `<div class="info-card" data-lib="${lib.id}"><span><strong>${lib.name}</strong> (${count}词)</span><button class="small-btn manageWordsBtn" data-id="${lib.id}">管理单词</button></div>`;
+        }
+        html += `</div><div id="wordManageArea" style="margin-top:20px;"></div></div>`;
+        container.innerHTML = html;
+        document.getElementById('newLibBtn')?.addEventListener('click', async () => {
+            const name = prompt('词库名称');
+            if(name) await supabase.from('word_libraries').insert({ teacher_id: currentUser.id, name });
+            renderTeacherLibrary();
+        });
+        document.querySelectorAll('.manageWordsBtn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const libId = btn.dataset.id;
+                const { data: words } = await supabase.from('words').select('*').eq('library_id', libId);
+                let wordHtml = `<div><input id="newWord" placeholder="英文"><input id="newTrans" placeholder="中文释义"><button id="addWordBtn" class="small-btn">添加单词</button></div><ul>`;
+                words.forEach(w => { wordHtml += `<li><b>${w.word}</b> - ${w.translation} <button class="small-btn delWord" data-id="${w.id}">删除</button></li>`; });
+                wordHtml += `</ul>`;
+                document.getElementById('wordManageArea').innerHTML = wordHtml;
+                document.getElementById('addWordBtn')?.addEventListener('click', async () => {
+                    const word = document.getElementById('newWord').value.trim();
+                    const trans = document.getElementById('newTrans').value.trim();
+                    if(word && trans) await supabase.from('words').insert({ library_id: libId, word, translation: trans });
+                    renderTeacherLibrary();
+                });
+                document.querySelectorAll('.delWord').forEach(del => {
+                    del.addEventListener('click', async () => { await supabase.from('words').delete().eq('id', del.dataset.id); renderTeacherLibrary(); });
+                });
+            });
+        });
+    }
+    
+    // 管理员面板
+    async function renderAdminPanel() {
+        const { data: teachers, error } = await supabase.from('teachers').select('id, username, email, expiry_date');
+        if (error) { showModal('获取失败'); return; }
+        let html = `<button id="createTeacherBtn" class="btn-primary">新建教师</button><table style="width:100%; margin-top:16px;"><tr><th>用户名</th><th>邮箱</th><th>到期日</th><th>操作</th></tr>`;
+        for(let t of teachers) {
+            html += `<tr><td>${t.username}</td><td>${t.email}</td><td>${t.expiry_date || '未设置'}</td><td><button class="small-btn extend" data-id="${t.id}">延期30天</button></td></tr>`;
+        }
+        html += `</table>`;
+        document.getElementById('teacherListContainer').innerHTML = html;
+        document.getElementById('createTeacherBtn')?.addEventListener('click', async () => {
+            const email = prompt('教师邮箱');
+            const pwd = prompt('密码');
+            if(email && pwd) {
+                const { data, error } = await supabase.auth.signUp({ email, password: pwd });
+                if(error) showModal(error.message);
+                else await supabase.from('teachers').insert({ id: data.user.id, username: email.split('@')[0], email, expiry_date: null });
+                renderAdminPanel();
+            }
+        });
+        document.querySelectorAll('.extend').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const tid = btn.dataset.id;
+                const { data: t } = await supabase.from('teachers').select('expiry_date').eq('id', tid).single();
+                let newDate = new Date();
+                if(t.expiry_date && new Date(t.expiry_date) > newDate) newDate = new Date(t.expiry_date);
+                newDate.setDate(newDate.getDate() + 30);
+                await supabase.from('teachers').update({ expiry_date: newDate.toISOString().split('T')[0] }).eq('id', tid);
+                renderAdminPanel();
+            });
+        });
+    }
+    
+    // 登录逻辑
+    async function login(email, password) {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) { showModal('登录失败：' + error.message); return false; }
+        currentUser = data.user;
+        const isAdmin = email === 'admin@example.com';
+        if (isAdmin) {
+            authView.classList.remove('active-view');
+            adminView.classList.add('active-view');
+            renderAdminPanel();
+        } else {
+            const { data: teacherData } = await supabase.from('teachers').select('id').eq('id', currentUser.id).single();
+            if (!teacherData) { await supabase.from('teachers').insert({ id: currentUser.id, username: email.split('@')[0], email, expiry_date: null }); }
+            await checkExpiryAndRender();
+            authView.classList.remove('active-view');
+            teacherView.classList.add('active-view');
+            switchTeacherTab('home');
+        }
+        return true;
+    }
+    
+    async function register(email, password, username) {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) { showModal('注册失败：' + error.message); return false; }
+        await supabase.from('teachers').insert({ id: data.user.id, username, email, expiry_date: null });
+        showModal('注册成功，请登录');
+        return true;
+    }
+    
+    function switchTeacherTab(tab) {
+        currentTeacherTab = tab;
+        document.querySelectorAll('.teacher-tab-view').forEach(v => v.style.display = 'none');
+        if (tab === 'home') { document.getElementById('teacherHomeView').style.display = 'block'; renderTeacherHome(); }
+        else if (tab === 'schedule') { document.getElementById('teacherScheduleView').style.display = 'block'; renderTeacherSchedule(); }
+        else if (tab === 'antiForget') { document.getElementById('teacherAntiForgetView').style.display = 'block'; renderTeacherAntiForget(); }
+        else if (tab === 'library') { document.getElementById('teacherLibraryView').style.display = 'block'; renderTeacherLibrary(); }
+        document.querySelectorAll('[data-teacher-tab]').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`[data-teacher-tab="${tab}"]`).classList.add('active');
+    }
+    
+    // 事件绑定
+    document.getElementById('loginBtn').onclick = async () => { await login(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value); };
+    document.getElementById('showRegisterBtn').onclick = (e) => { e.preventDefault(); document.getElementById('loginForm').style.display = 'none'; document.getElementById('registerForm').style.display = 'block'; };
+    document.getElementById('showLoginBtn').onclick = (e) => { e.preventDefault(); document.getElementById('loginForm').style.display = 'block'; document.getElementById('registerForm').style.display = 'none'; };
+    document.getElementById('registerBtn').onclick = async () => { await register(document.getElementById('regEmail').value, document.getElementById('regPassword').value, document.getElementById('regUsername').value); };
+    document.getElementById('logoutBtn').onclick = async () => { await supabase.auth.signOut(); currentUser=null; teacherView.classList.remove('active-view'); authView.classList.add('active-view'); };
+    document.getElementById('adminLogoutBtn').onclick = async () => { await supabase.auth.signOut(); currentUser=null; adminView.classList.remove('active-view'); authView.classList.add('active-view'); };
+    document.querySelectorAll('[data-teacher-tab]').forEach(btn => btn.addEventListener('click', () => switchTeacherTab(btn.dataset.teacherTab)));
+    
+    // 初始会话
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+            currentUser = session.user;
+            if (session.user.email === 'admin@example.com') { authView.classList.remove('active-view'); adminView.classList.add('active-view'); renderAdminPanel(); }
+            else { authView.classList.remove('active-view'); teacherView.classList.add('active-view'); checkExpiryAndRender(); switchTeacherTab('home'); }
+        } else { authView.classList.add('active-view'); }
+    });
+    
+    // 预置一些示例词库（避免空数据）
+    setTimeout(async () => {
+        if(currentUser && currentUser.email !== 'admin@example.com'){
+            const { data: libs } = await supabase.from('word_libraries').select('id').eq('teacher_id', currentUser.id);
+            if(libs.length === 0){
+                const { data: newLib } = await supabase.from('word_libraries').insert({ teacher_id: currentUser.id, name: '四级核心词汇' }).select().single();
+                if(newLib){
+                    const demoWords = [{word:'abandon',trans:'抛弃，放弃'},{word:'ability',trans:'能力'},{word:'absent',trans:'缺席'},{word:'absorb',trans:'吸收'},{word:'abundant',trans:'丰富的'}];
+                    for(let w of demoWords) await supabase.from('words').insert({ library_id: newLib.id, word: w.word, translation: w.trans });
+                }
+            }
+        }
+    }, 1000);
+</script>
+</body>
+</html>
