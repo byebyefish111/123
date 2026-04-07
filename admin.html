@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>教师管理后台</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{font-family:sans-serif;padding:20px;background:#f4f6f8}
+table{width:100%;border-collapse:collapse;background:#fff;margin-top:15px}th,td{padding:12px;border-bottom:1px solid #eee;text-align:left}
+.btn{padding:6px 12px;border-radius:6px;border:none;cursor:pointer;color:#fff;font-size:13px}
+.btn-green{background:#22c55e}.btn-blue{background:#3b82f6}
+input,select{padding:6px;border:1px solid #ccc;border-radius:4px}
+</style>
+</head>
+<body>
+  <h2>🛡️ 教师订阅管理</h2>
+  <input type="password" id="admin-key" placeholder="输入 Admin Key" style="width:250px;margin-right:8px">
+  <button class="btn btn-blue" onclick="login()">进入后台</button>
+  <table id="tbl"><tr><th>邮箱</th><th>到期时间</th><th>操作</th></tr></table>
+<script>
+let client;
+const SB_URL = ""; // 您的 Supabase URL
+const SB_SERVICE_KEY = ""; // Service Role Key (严禁泄露)
+
+async function login(){
+  const k = document.getElementById('admin-key').value;
+  if(k!=='ADMIN_SECRET_2024') return alert('密钥错误');
+  client = supabase.createClient(SB_URL, SB_SERVICE_KEY, {auth:{persistSession:false}});
+  loadData();
+}
+async function loadData(){
+  const {data} = await client.from('teachers').select('*').order('created_at',{ascending:false});
+  const tbl = document.getElementById('tbl');
+  data.forEach(t=>{
+    tbl.innerHTML+=`<tr>
+      <td>${t.email}</td>
+      <td>${new Date(t.expiry_date).toLocaleString()}</td>
+      <td>
+        <select id="d-${t.id}"><option value="30">+30天</option><option value="90">+90天</option><option value="365">+1年</option></select>
+        <button class="btn btn-green" onclick="extend('${t.id}')">续期</button>
+      </td>
+    </tr>`;
+  });
+}
+async function extend(id){
+  const days = parseInt(document.getElementById(`d-${id}`).value);
+  const {data: t} = await client.from('teachers').select('expiry_date').eq('id',id).single();
+  const newExp = new Date(new Date(t.expiry_date).getTime() + days*86400000).toISOString();
+  await client.from('teachers').update({expiry_date: newExp}).eq('id', id);
+  alert('续期成功！'); loadData();
+}
+</script>
+</body>
+</html>
